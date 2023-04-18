@@ -3,38 +3,74 @@
  */
 package sdp.task2;
 import java.io.File;
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import java.util.Scanner;
 
 public class App {
+
     public static void main(String[] args) {
+        // Prompt the user to select which fields to output
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Which fields would you like to output?");
+        System.out.println("1. Name");
+        System.out.println("2. Postal ZIP code");
+        System.out.println("3. Region");
+        System.out.println("4. Country");
+        System.out.println("5. Address");
+        System.out.println("6. List");
+        System.out.print("Enter the numbers of the fields separated by commas: ");
+        String[] fieldNumbers = scanner.nextLine().split(",");
+        
+        // Load the XML file
         try {
-            File inputFile = new File("data.xml");
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-            Document doc = dBuilder.parse(inputFile);
+            File file = new File("data.xml");
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(file);
             doc.getDocumentElement().normalize();
-            NodeList nList = doc.getElementsByTagName("record");
-            for (int temp = 0; temp < nList.getLength(); temp++) {
-                Element record = (Element) nList.item(temp);
-                String name = record.getElementsByTagName("name").item(0).getTextContent();
-                String postalZip = record.getElementsByTagName("postalZip").item(0).getTextContent();
-                String region = record.getElementsByTagName("region").item(0).getTextContent();
-                String country = record.getElementsByTagName("country").item(0).getTextContent();
-                String address = record.getElementsByTagName("address").item(0).getTextContent();
-                String list = record.getElementsByTagName("list").item(0).getTextContent();
-                System.out.println("Name: " + name);
-                System.out.println("Postal ZIP code: " + postalZip);
-                System.out.println("Region: " + region);
-                System.out.println("Country: " + country);
-                System.out.println("Address: " + address);
-                System.out.println("List: " + list);
-            }
+            
+            // Extract the field values from the XML document
+            Element record = (Element) doc.getElementsByTagName("record").item(0);
+            String name = getNodeValue(record, "name", fieldNumbers);
+            String postalZip = getNodeValue(record, "postalZip", fieldNumbers);
+            String region = getNodeValue(record, "region", fieldNumbers);
+            String country = getNodeValue(record, "country", fieldNumbers);
+            String address = getNodeValue(record, "address", fieldNumbers);
+            String list = getNodeValue(record, "list", fieldNumbers);
+            
+            // Output the selected fields
+            if (name != null) System.out.println("Name: " + name);
+            if (postalZip != null) System.out.println("Postal ZIP code: " + postalZip);
+            if (region != null) System.out.println("Region: " + region);
+            if (country != null) System.out.println("Country: " + country);
+            if (address != null) System.out.println("Address: " + address);
+            if (list != null) System.out.println("List: " + list);
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    
+    private static String getNodeValue(Element element, String tagName, String[] selectedFields) {
+        // Return null if the current tag is not selected
+        boolean isSelected = false;
+        for (String fieldNumber : selectedFields) {
+            if (fieldNumber.trim().equals(tagName)) {
+                isSelected = true;
+                break;
+            }
+        }
+        if (!isSelected) {
+            return null;
+        }
+        
+        // Extract the text value of the specified tag
+        NodeList nodeList = element.getElementsByTagName(tagName);
+        Element subElement = (Element) nodeList.item(0);
+        return subElement.getTextContent();
     }
 }
