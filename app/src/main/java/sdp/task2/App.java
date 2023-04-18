@@ -2,13 +2,14 @@ package sdp.task2;
 
 import java.io.File;
 import java.util.Scanner;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import org.xml.sax.Attributes;
+import org.xml.sax.helpers.DefaultHandler;
 
 public class App {
+
+    private static final String[] FIELD_NAMES = {"name", "postalZip", "region", "country", "address", "list"};
 
     public static void main(String[] args) {
         // Prompt the user to select which fields to output
@@ -34,34 +35,11 @@ public class App {
         // Load the XML file
         try {
             File file = new File("data.xml");
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            DocumentBuilder db = dbf.newDocumentBuilder();
-            Document doc = db.parse(file);
-            doc.getDocumentElement().normalize();
-            
-            // Extract the field values from the XML document
-            Element record = (Element) doc.getElementsByTagName("record").item(0);
-            String name = getNodeValue(record, "name", fieldNumbers);
-            String postalZip = getNodeValue(record, "postalZip", fieldNumbers);
-            String region = getNodeValue(record, "region", fieldNumbers);
-            String country = getNodeValue(record, "country", fieldNumbers);
-            String address = getNodeValue(record, "address", fieldNumbers);
-            String list = getNodeValue(record, "list", fieldNumbers);
-            
-            // Output the selected fields in JSON format
-            StringBuilder sb = new StringBuilder();
-            sb.append("{");
-            if (name != null) sb.append("\"Name\": \"" + name + "\", ");
-            if (postalZip != null) sb.append("\"Postal ZIP code\": \"" + postalZip + "\", ");
-            if (region != null) sb.append("\"Region\": \"" + region + "\", ");
-            if (country != null) sb.append("\"Country\": \"" + country + "\", ");
-            if (address != null) sb.append("\"Address\": \"" + address + "\", ");
-            if (list != null) sb.append("\"List\": \"" + list + "\", ");
-            sb.delete(sb.length() - 2, sb.length()); // Remove the last ", " from the output
-            sb.append("}");
-            
-            System.out.println(sb.toString());
-            
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            SAXParser saxParser = factory.newSAXParser();
+            RecordHandler handler = new RecordHandler(fieldNumbers);
+            saxParser.parse(file, handler);
+            System.out.println(handler.toJson());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -76,28 +54,56 @@ public class App {
         }
     }
     
-    private static String getNodeValue(Element element, String tagName, String[] selectedFields) {
-    // Return null if the current tag is not selected
-    boolean isSelected = false;
-    for (String fieldNumber : selectedFields) {
-        if (fieldNumber.trim().equals(tagName)) {
-            isSelected = true;
-            break;
+    private static class RecordHandler extends DefaultHandler {
+        private final String[] selectedFields;
+        private final StringBuilder sb;
+        private String currentField;
+        private boolean inRecord;
+
+        public RecordHandler(String[] selectedFields) {
+            this.selectedFields = selectedFields;
+            this.sb = new StringBuilder("{");
+        }
+
+        @Override
+        public void startElement(String uri, String localName, String qName, Attributes attributes) {
+            if (qName.equals("record")) {
+                inRecord = true;
+            } else if (inRecord) {
+                for (String fieldName : FIELD_NAMES) {
+                    if (qName.equals(fieldName)) {
+                        currentField = fieldName;
+                        break;
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void characters(char[] ch, int start, int length) {
+            if (inRecord && currentField != null) {
+                String value = new String(ch, start, length).trim();
+                for (String selectedField : selectedFields) {
+                    if (selectedField.trim().equals(currentField)) {
+                        sb.append("\"").append(currentField).append("\": \"").append(value).append("\", ");
+                        break;
+                    }
+                }
+                currentField = null;
+            }
+        }
+
+        @Override
+        public void endElement(String uri, String localName, String qName) {
+            if (qName.equals("record")) {
+                inRecord = false;
+            }
+        }
+
+        public String toJson() {
+            sb.delete(sb.length() - 2, sb.length()); // Remove the last ", "
+            sb.append("}");
+            return sb.toString();
         }
     }
-    if (!isSelected) {
-        return null;
-    }
-
-    // Extract the text value of the specified tag
-    NodeList nodeList = element.getElementsByTagName(tagName);
-    if (nodeList.getLength() == 0) {
-        return null;
-    }
-    Element subElement = (Element) nodeList.item(0);
-    if (subElement == null || subElement.getTextContent() == null) {
-        return null;
-    }
-    return subElement.getTextContent();
-}
 }
