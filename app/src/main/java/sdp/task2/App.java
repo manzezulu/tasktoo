@@ -42,13 +42,19 @@ public class App {
             String address = getNodeValue(record, "address", fieldNumbers);
             String list = getNodeValue(record, "list", fieldNumbers);
             
-            // Output the selected fields
-            if (name != null) System.out.println("Name: " + name);
-            if (postalZip != null) System.out.println("Postal ZIP code: " + postalZip);
-            if (region != null) System.out.println("Region: " + region);
-            if (country != null) System.out.println("Country: " + country);
-            if (address != null) System.out.println("Address: " + address);
-            if (list != null) System.out.println("List: " + list);
+            // Output the selected fields in JSON format
+            StringBuilder sb = new StringBuilder();
+            sb.append("{");
+            if (name != null) sb.append("\"Name\": \"" + name + "\", ");
+            if (postalZip != null) sb.append("\"Postal ZIP code\": \"" + postalZip + "\", ");
+            if (region != null) sb.append("\"Region\": \"" + region + "\", ");
+            if (country != null) sb.append("\"Country\": \"" + country + "\", ");
+            if (address != null) sb.append("\"Address\": \"" + address + "\", ");
+            if (list != null) sb.append("\"List\": \"" + list + "\", ");
+            sb.delete(sb.length() - 2, sb.length()); // Remove the last ", " from the output
+            sb.append("}");
+            
+            System.out.println(sb.toString());
             
         } catch (Exception e) {
             e.printStackTrace();
